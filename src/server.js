@@ -1,18 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import config from '../config/config.js';
-import { connectDB } from '../config/db.js';
-import { errorHandler } from '../middlewares/errorHandler.js';
+import config from './config/index.js';
+import { connectDB } from './config/database.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
-// Routes (reuse existing route files at repo root)
-import customersRoutes from '../routes/customers.routes.js';
-import addressRoutes from '../routes/address.routes.js';
-import districtsRoutes from '../routes/districts.routes.js';
-import staffRoutes from '../routes/staff.routes.js';
-import ordersRoutes from '../routes/orders.routes.js';
-import orderItemsRoutes from '../routes/orderitems.routes.js';
-import paymentsRoutes from '../routes/payments.routes.js';
+// Routes (from src/api)
+import customersRoutes from './api/routes/customers.routes.js';
+import addressRoutes from './api/routes/address.routes.js';
+import districtsRoutes from './api/routes/districts.routes.js';
+import staffRoutes from './api/routes/staff.routes.js';
+import ordersRoutes from './api/routes/orders.routes.js';
+import orderItemsRoutes from './api/routes/orderitems.routes.js';
+import paymentsRoutes from './api/routes/payments.routes.js';
 
 const app = express();
 
@@ -22,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
 
+// Connect DB
 connectDB();
 
 app.get('/', (req, res) => res.json({ message: 'Water Logistics API', version: '1.0.0' }));

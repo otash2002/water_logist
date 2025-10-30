@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import Payment from '../../models/payment.model.js';
-import Order from '../../models/orders.model.js';
-import { success, error } from '../../../utils/response.js';
+import Payment from '../models/payment.model.js';
+import Order from '../models/orders.model.js';
+import { success, error } from '../utils/response.js';
 
 const PaymentController = {
   create: async (req, res) => {
