@@ -1,6 +1,7 @@
-import Payment from '../models/payment.model.js';
-import Order from '../models/orders.model.js';
-import { success, error } from '../utils/response.js';
+import mongoose from 'mongoose';
+import Payment from '../../models/payment.model.js';
+import Order from '../../models/orders.model.js';
+import { success, error } from '../../../utils/response.js';
 
 const PaymentController = {
   create: async (req, res) => {
@@ -12,25 +13,23 @@ const PaymentController = {
       // basic amount check
       if (amount < ord.totalAmount) return error(res, 'Payment amount is less than order total', 400);
 
-      // Try to use transaction if supported
+      // Use a mongoose session to ensure atomicity when supported
       let payment;
-      const session = await Order.db.startSession().catch(() => null);
-      if (session) {
-        try {
-          session.startTransaction();
-          payment = await Payment.create([{ order: orderId, amount, method, transactionId, status: 'completed' }], { session });
-          // update order payment status inside tx
-          await Order.findByIdAndUpdate(orderId, { paymentStatus: 'paid' }, { session });
-          await session.commitTransaction();
-          session.endSession();
-          payment = payment[0];
-        } catch (txErr) {
-          await session.abortTransaction();
-          session.endSession();
-          throw txErr;
-        }
-      } else {
-        // fallback non-transactional
+      const session = await mongoose.startSession();
+      try {
+        session.startTransaction();
+        payment = await Payment.create(
+          [{ order: orderId, amount, method, transactionId, status: 'completed' }],
+          { session }
+        );
+        await Order.findByIdAndUpdate(orderId, { paymentStatus: 'paid' }, { session });
+        await session.commitTransaction();
+        session.endSession();
+        payment = payment[0];
+      } catch (txErr) {
+        await session.abortTransaction();
+        session.endSession();
+        // fallback: try non-transactional write (best-effort)
         payment = await Payment.create({ order: orderId, amount, method, transactionId, status: 'completed' });
         ord.paymentStatus = 'paid';
         await ord.save();

@@ -1,17 +1,25 @@
-# Water Logistics API Testing Guide
+# Water Logistics API Documentation
 
 Base URL: `http://localhost:5000`
 
 ## Authentication
-All routes except register and login require Bearer token:
+All routes except customer/staff registration and login require Bearer token:
 ```
 Authorization: Bearer your_token_here
 ```
+
+## Role-Based Access
+The API implements role-based access control with the following roles:
+- `customer`: Basic access to own data and orders
+- `staff`: Access to assigned deliveries and basic operations
+- `manager`: District management and advanced operations
+- `admin`: Full system access
 
 ## Customer Endpoints
 
 ### 1. Register Customer
 - **URL**: POST `/api/customers/register`
+- **Access**: Public
 - **Body**:
 ```json
 {
@@ -21,10 +29,11 @@ Authorization: Bearer your_token_here
     "password": "password123"
 }
 ```
-- **Response**: Returns token and user info
+- **Response**: Returns user info and authentication token
 
 ### 2. Login Customer
 - **URL**: POST `/api/customers/login`
+- **Access**: Public
 - **Body**:
 ```json
 {
@@ -32,170 +41,199 @@ Authorization: Bearer your_token_here
     "password": "password123"
 }
 ```
-- **Response**: Returns token and user info
+- **Response**: Returns user info and authentication token
 
-### 3. List All Customers
-- **URL**: GET `/api/customers`
-- **Auth**: Required
-- **Response**: Returns array of customers
+### 3. Get Customer Profile
+- **URL**: GET `/api/customers/profile`
+- **Auth**: Required (Customer)
+- **Response**: Returns customer's own profile data
 
-### 4. Get Customer by ID
-- **URL**: GET `/api/customers/:id`
-- **Auth**: Required
-- **Example**: `/api/customers/6523a89b1234567890abcdef`
-
-### 5. Update Customer
-- **URL**: PUT `/api/customers/:id`
-- **Auth**: Required
+### 4. Update Customer Profile
+- **URL**: PUT `/api/customers/profile`
+- **Auth**: Required (Customer)
 - **Body** (all fields optional):
 ```json
 {
     "name": "John Updated",
-    "email": "john.updated@example.com",
     "phone": "+998901234568"
 }
 ```
-
-### 6. Delete Customer
-- **URL**: DELETE `/api/customers/:id`
-- **Auth**: Required
-- **Example**: `/api/customers/6523a89b1234567890abcdef`
 
 ## Address Endpoints
 
 ### 1. Create Address
 - **URL**: POST `/api/addresses`
-- **Auth**: Required
+- **Auth**: Required (Customer)
 - **Body**:
 ```json
 {
-    "name": "Main Office",
-    "email": "office@example.com",
-    "phone": "+998901234570",
-    "password": "address123"
+    "district": "district_id",
+    "street": "123 Main St",
+    "building": "45A",
+    "apartment": "12",
+    "floor": 3,
+    "notes": "Near the park"
 }
 ```
 
-### 2. List All Addresses
+### 2. List Customer Addresses
 - **URL**: GET `/api/addresses`
-- **Auth**: Required
+- **Auth**: Required (Customer)
+- **Query Parameters**:
+  - `active`: Boolean to filter active/inactive addresses
+  - `district`: Filter by district ID
 
-### 3. Get Address by ID
-- **URL**: GET `/api/addresses/:id`
-- **Auth**: Required
-- **Example**: `/api/addresses/6523a89b1234567890abcdef`
-
-### 4. Update Address
+### 3. Update Address
 - **URL**: PUT `/api/addresses/:id`
-- **Auth**: Required
+- **Auth**: Required (Customer, own addresses only)
 - **Body** (all fields optional):
 ```json
 {
-    "name": "Updated Office",
-    "email": "updated.office@example.com",
-    "phone": "+998901234571"
+    "street": "Updated Street",
+    "building": "46B",
+    "notes": "Updated location details"
 }
 ```
-
-### 5. Delete Address
-- **URL**: DELETE `/api/addresses/:id`
-- **Auth**: Required
 
 ## District Endpoints
 
 ### 1. Create District
 - **URL**: POST `/api/districts`
-- **Auth**: Required
+- **Auth**: Required (Admin only)
 - **Body**:
 ```json
 {
     "name": "Central District",
-    "email": "central@example.com",
-    "phone": "+998901234580",
-    "password": "district123"
+    "description": "Central area of the city",
+    "deliveryFee": 10000,
+    "boundaries": "Central district boundaries description",
+    "manager": "staff_id"
 }
 ```
 
-### 2. List All Districts
+### 2. List Districts
 - **URL**: GET `/api/districts`
 - **Auth**: Required
+- **Query Parameters**:
+  - `active`: Boolean to filter active/inactive districts
+  - `manager`: Filter by manager ID
 
-### 3. Get District by ID
-- **URL**: GET `/api/districts/:id`
-- **Auth**: Required
-- **Example**: `/api/districts/6523a89b1234567890abcdef`
-
-### 4. Update District
+### 3. Update District
 - **URL**: PUT `/api/districts/:id`
-- **Auth**: Required
+- **Auth**: Required (Admin or assigned Manager)
 - **Body** (all fields optional):
 ```json
 {
-    "name": "Updated District",
-    "email": "updated.district@example.com",
-    "phone": "+998901234581"
+    "name": "Updated District Name",
+    "deliveryFee": 12000,
+    "manager": "new_manager_id"
 }
 ```
 
-### 5. Delete District
-- **URL**: DELETE `/api/districts/:id`
-- **Auth**: Required
+## Order Endpoints
 
-## Testing Flow
-
-1. First register a customer:
-```bash
-curl -X POST http://localhost:5000/api/customers/register \
--H "Content-Type: application/json" \
--d '{
-    "name": "Test User",
-    "email": "test@example.com",
-    "phone": "+998901234567",
-    "password": "password123"
-}'
-```
-
-2. Login and save the token:
-```bash
-curl -X POST http://localhost:5000/api/customers/login \
--H "Content-Type: application/json" \
--d '{
-    "email": "test@example.com",
-    "password": "password123"
-}'
-```
-
-3. Use the token for other requests:
-```bash
-curl -X GET http://localhost:5000/api/customers \
--H "Authorization: Bearer your_token_here"
-```
-
-## Response Format
-
-Success Response:
+### 1. Create Order
+- **URL**: POST `/api/orders`
+- **Auth**: Required (Customer)
+- **Body**:
 ```json
 {
-    "success": true,
-    "message": "Success message here",
-    "data": {
-        // Response data here
-    }
+    "address": "address_id",
+    "items": [
+        {
+            "productName": "Water Bottle 19L",
+            "quantity": 2,
+            "price": 15000
+        }
+    ],
+    "notes": "Please deliver in the morning"
 }
 ```
 
-Error Response:
+### 2. List Orders
+- **URL**: GET `/api/orders`
+- **Auth**: Required
+- **Query Parameters**:
+  - `status`: Filter by order status
+  - `from`: Start date
+  - `to`: End date
+  - `page`: Page number
+  - `limit`: Items per page
+  - `sort`: Sort field
+  - `customer`: Filter by customer (Admin/Manager only)
+
+### 3. Get Order Details
+- **URL**: GET `/api/orders/:id`
+- **Auth**: Required (Customer: own orders, Staff: assigned orders, Admin/Manager: all)
+
+### 4. Update Order Status
+- **URL**: PUT `/api/orders/:id`
+- **Auth**: Required (Staff/Manager/Admin)
+- **Body**:
+```json
+{
+    "status": "confirmed",
+    "staff": "staff_id",
+    "notes": "Delivery scheduled for tomorrow"
+}
+```
+
+## Payment Endpoints
+
+### 1. Create Payment
+- **URL**: POST `/api/payments`
+- **Auth**: Required (Staff/Manager/Admin)
+- **Body**:
+```json
+{
+    "order": "order_id",
+    "amount": 30000,
+    "method": "cash",
+    "transactionId": "optional_transaction_id"
+}
+```
+
+### 2. List Payments
+- **URL**: GET `/api/payments`
+- **Auth**: Required (Admin/Manager)
+- **Query Parameters**:
+  - `status`: Payment status
+  - `method`: Payment method
+  - `from`: Start date
+  - `to`: End date
+  - `page`: Page number
+  - `limit`: Items per page
+
+## Common Patterns
+
+### Pagination
+All list endpoints support pagination with these query parameters:
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 10, max: 100)
+
+### Error Handling
+Error responses follow this format:
 ```json
 {
     "success": false,
-    "message": "Error message here",
-    "details": [] // Optional error details
+    "message": "Error description",
+    "details": [
+        {
+            "field": "fieldName",
+            "message": "Specific error for this field"
+        }
+    ]
 }
 ```
 
-## Validation Rules
+### Request Limits
+- Rate limit: 100 requests per 15 minutes
+- Payload size limit: 10MB
+- Maximum items per page: 100
 
-- Phone numbers must be in format: +998XXXXXXXXX
-- Email must be valid format
-- Password minimum length: 6 characters
-- Name minimum length: 2 characters
+### Data Validation Rules
+- Phone numbers: Must match `^\\+998\\d{9}$`
+- Email: Must be valid format
+- Password: Minimum 6 characters
+- Names: 2-50 characters
+- IDs: Valid MongoDB ObjectId
